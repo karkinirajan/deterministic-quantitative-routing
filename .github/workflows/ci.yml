@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.12 is the oldest supported (pyproject "requires-python"); 3.14 is what .python-version pins.
+        python: ['3.12', '3.14']
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install uv
+        run: pipx install uv
+      - run: uv sync --locked --python ${{ matrix.python }}
+      - name: Lint
+        run: uv run ruff check .
+      - name: Tests
+        run: uv run pytest -q
+      - name: Dependency audit
+        if: matrix.python == '3.14'
+        run: uv audit --preview-features audit-command
+
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker build -t dqr .

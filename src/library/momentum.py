@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from src.library.core import validate_input, validate_output
+from src.library.core import check_number, check_window, validate_input, validate_output
 
 
 def calculate_rsi(prices: pd.Series, period: int = 14) -> pd.Series:
@@ -17,14 +17,14 @@ def calculate_rsi(prices: pd.Series, period: int = 14) -> pd.Series:
     return rsi.fillna(50)  # Neutral RSI at start
 
 
-def rsi_overbought(
-    prices: np.ndarray, period: int = 14, threshold: int = 70
-) -> np.ndarray:
+def rsi_overbought(prices: np.ndarray, period: int = 14, threshold: int = 70) -> np.ndarray:
     """
     RSI Overbought.
     Returns 1 when RSI > Threshold (Overbought), else 0.
     """
     validate_input(prices)
+    period = check_window("period", period)
+    threshold = check_number("threshold", threshold, 0, 100)
 
     rsi = calculate_rsi(pd.Series(prices), period)
     regime = np.where(rsi > threshold, 1, 0)
@@ -33,14 +33,14 @@ def rsi_overbought(
     return regime.astype(int)
 
 
-def rsi_oversold(
-    prices: np.ndarray, period: int = 14, threshold: int = 30
-) -> np.ndarray:
+def rsi_oversold(prices: np.ndarray, period: int = 14, threshold: int = 30) -> np.ndarray:
     """
     RSI Oversold.
     Returns 1 when RSI < Threshold (Oversold), else 0.
     """
     validate_input(prices)
+    period = check_window("period", period)
+    threshold = check_number("threshold", threshold, 0, 100)
 
     rsi = calculate_rsi(pd.Series(prices), period)
     regime = np.where(rsi < threshold, 1, 0)

@@ -1,4 +1,3 @@
-from typing import List
 
 from src.router.interface import ExecutionBlueprint, FunctionCall, SemanticRouter
 

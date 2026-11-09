@@ -1,6 +1,10 @@
-from typing import Any, Dict, List, Literal, Optional, Protocol
+from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, Field
+
+# What a router may ask for in one plan: the router will be a language model, so its output is bounded.
+MAX_STEPS = 20
+MAX_ASSETS = 50
 
 
 class FunctionCall(BaseModel):
@@ -9,7 +13,7 @@ class FunctionCall(BaseModel):
     """
 
     function_name: str
-    args: Dict[str, Any] = Field(default_factory=dict)
+    args: dict[str, Any] = Field(default_factory=dict)
     weight: float = 1.0  # For weighted combinations
 
 
@@ -18,10 +22,10 @@ class ExecutionBlueprint(BaseModel):
     Structured plan for executing the user's intent.
     """
 
-    steps: List[FunctionCall]
+    steps: list[FunctionCall] = Field(max_length=MAX_STEPS)
     composition: Literal["AND", "OR", "XOR", "AVERAGE", "SUM"] = "AND"
     timeframe: str = "1d"  # Default to daily
-    assets: List[str] = Field(default_factory=list)
+    assets: list[str] = Field(default_factory=list, max_length=MAX_ASSETS)
     description: str = ""  # Explanation of the plan
 
 

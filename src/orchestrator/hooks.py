@@ -1,4 +1,3 @@
-from typing import Any, Callable
 
 import numpy as np
 
@@ -19,7 +18,7 @@ class LifecycleHooks:
             validate_input(prices)
             # Add more specific validation here if needed
         except Exception as e:
-            raise ValueError(f"PreToolUse Hook Failed for {func_name}: {str(e)}")
+            raise ValueError(f"PreToolUse Hook Failed for {func_name}: {e}") from e
 
     @staticmethod
     def post_tool_use(func_name: str, result: np.ndarray, input_len: int) -> None:
@@ -29,7 +28,7 @@ class LifecycleHooks:
         try:
             validate_output(result, input_len)
         except Exception as e:
-            raise ValueError(f"PostToolUse Hook Failed for {func_name}: {str(e)}")
+            raise ValueError(f"PostToolUse Hook Failed for {func_name}: {e}") from e
 
     @staticmethod
     def stop_hook(

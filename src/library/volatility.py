@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from src.library.core import validate_input, validate_output
+from src.library.core import check_number, check_window, validate_input, validate_output
 
 
 def bollinger_squeeze(
@@ -13,8 +13,15 @@ def bollinger_squeeze(
     """
     Bollinger Band Squeeze.
     Returns 1 when Bandwidth < Threshold, indicating low volatility consolidation.
+
+    Bandwidth is measured against the size of the average, |SMA|, so a spread (a synthetic
+    position such as A-B, which can be zero or negative) is never read as a squeeze just
+    because its average is negative.
     """
     validate_input(prices)
+    window = check_window("window", window, minimum=2)
+    num_std = check_number("num_std", num_std, 0)
+    squeeze_threshold = check_number("squeeze_threshold", squeeze_threshold, 0)
 
     series = pd.Series(prices)
     sma = series.rolling(window=window).mean()
@@ -23,8 +30,9 @@ def bollinger_squeeze(
     upper_band = sma + (std * num_std)
     lower_band = sma - (std * num_std)
 
-    bandwidth = (upper_band - lower_band) / sma
-    bandwidth = bandwidth.fillna(1.0)  # Avoid false positives at start
+    # NaN during the warm-up (and for a zero average): a comparison with NaN is False, so no squeeze is signalled there.
+    # (It used to be filled with 1.0, which signalled a squeeze in the warm-up for any threshold above 1.)
+    bandwidth = (upper_band - lower_band) / sma.abs()
 
     regime = np.where(bandwidth < squeeze_threshold, 1, 0)
 
@@ -39,15 +47,14 @@ def atr_expansion(prices: np.ndarray, window: int = 14) -> np.ndarray:
     Returns 1 when Volatility (std dev) is rising above its SMA.
     """
     validate_input(prices)
+    window = check_window("window", window, minimum=2)
 
     series = pd.Series(prices)
     # Using rolling std dev as proxy for ATR since we only have close prices
     volatility = series.pct_change().rolling(window=window).std()
     volatility_sma = volatility.rolling(window=window * 2).mean()
 
-    volatility = volatility.fillna(0)
-    volatility_sma = volatility_sma.fillna(0)
-
+    # Where either is still undefined (the warm-up) the comparison is False: no signal.
     regime = np.where(volatility > volatility_sma, 1, 0)
 
     validate_output(regime, len(prices))

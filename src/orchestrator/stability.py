@@ -9,7 +9,7 @@ def calculate_hamming_distance(array1: np.ndarray, array2: np.ndarray) -> int:
     if len(array1) != len(array2):
         raise ValueError("Arrays must have the same length")
 
-    return np.count_nonzero(array1 != array2)
+    return int(np.count_nonzero(array1 != array2))
 
 
 def check_stability(d_h: int, input_len: int, threshold_pct: float = 0.01) -> bool:

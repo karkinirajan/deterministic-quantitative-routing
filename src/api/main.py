@@ -1,8 +1,13 @@
+import logging
+import os
+
 from fastapi import FastAPI, HTTPException
 
 from src.api.models import QueryRequest, RegimeResponse
-from src.orchestrator.engine import Orchestrator
+from src.orchestrator.engine import BlueprintError, Orchestrator
 from src.router.mock_router import MockSemanticRouter
+
+logger = logging.getLogger("uvicorn.error")
 
 app = FastAPI(
     title="Quant Library Orchestrator",
@@ -16,12 +21,14 @@ orchestrator = Orchestrator(router)
 
 
 @app.get("/health")
-async def health_check():
+def health_check():
     return {"status": "healthy", "version": "1.0.0"}
 
 
+# A plain `def`, not `async def`: the work is CPU-bound, so FastAPI runs it in its thread pool
+# instead of blocking the event loop.
 @app.post("/query", response_model=RegimeResponse)
-async def query_endpoint(request: QueryRequest):
+def query_endpoint(request: QueryRequest):
     """
     Process a natural language query to generate a quantitative regime.
     """
@@ -34,11 +41,17 @@ async def query_endpoint(request: QueryRequest):
             result = orchestrator.execute(request.query)
 
         return RegimeResponse(**result)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except BlueprintError as exc:
+        # The plan could not be executed; the message names the function or argument at fault.
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        # Anything else is the platform's fault: log it, tell the caller nothing about it.
+        logger.exception("query failed")
+        raise HTTPException(status_code=500, detail="Internal error") from exc
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Loopback by default: the API has no authentication. The Docker image sets HOST=0.0.0.0.
+    uvicorn.run(app, host=os.getenv("HOST", "127.0.0.1"), port=int(os.getenv("PORT", "8000")))

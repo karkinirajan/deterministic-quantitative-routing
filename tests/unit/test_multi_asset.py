@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 
 from src.orchestrator.engine import Orchestrator
 from src.router.interface import ExecutionBlueprint, FunctionCall, SemanticRouter
